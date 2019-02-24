@@ -1,8 +1,9 @@
 #include "pch.h"
 #include <iostream>
 #include <sstream>
+#include <math.h>
 #include <vector>
-#include <list>
+#include <algorithm>
 using namespace std;
 
 struct Node
@@ -58,16 +59,16 @@ struct Matrix {
 		return 0;
 	}
 	
-	Node* minor(int row, int colunm) {
+	Node* findMinor(Node* head, int row, int colunm) {
 		Node* minorHead = nullptr;
 		Node* previous = nullptr;
-		Node* tempHead = head_00;
+		Node* tempHead = head;
 		bool notFinish = true;
 		while (notFinish) {
 			if (tempHead->next == nullptr) {
 				notFinish = false;
 			}
-			if (tempHead->colunm != colunm && tempHead->row != row) {
+			if (tempHead->colunm != colunm && tempHead->row !=row) {
 				Node* newNode = new Node();
 				newNode->value = tempHead->value;
 				newNode->colunm = tempHead->colunm;
@@ -87,7 +88,15 @@ struct Matrix {
 		return minorHead;
 	}
 
-	int findDeterminant(Node* matrixHead, int side_length, int ignore_column) {
+	bool useColumn(vector<int> ignore_column, int column) {
+		if (ignore_column.empty()) {
+			return true;
+		}
+		return find(ignore_column.begin(),ignore_column.end(),column) == ignore_column.end();
+		
+	}
+
+	int findDeterminant(Node* matrixHead, int side_length, vector<int> ignore_column) {
 		int determinant = 0;
 		int common_factor = 1;
 		int rowCoordinate = 0;
@@ -146,16 +155,19 @@ struct Matrix {
 			}
 		}
 		
-		for (int colunm = matrixHead->colunm; colunm < side_length_00; colunm++) {
-			//Finding the factor that must be multiplied by the minor
-			if (colunm != ignore_column) {
-				common_factor = pow(-1, matrixHead->row + colunm) * getValue(matrixHead->row, colunm);
+		int factorIndex = 0;
+		for (int colunm = 0; colunm < side_length_00; colunm++) {
+			//Finding the factor that must be multiplied by the findMinor
+			if (useColumn(ignore_column, colunm)) {
+				
+				common_factor = (pow(-1, factorIndex) * getValue(matrixHead->row, colunm));
+				factorIndex++;
 
-
-				//call findDeterminant recursevly with head of the minor and all the elements at x and y with visited = true;
-				determinant += common_factor * findDeterminant(minor(matrixHead->row, colunm), --side_length, colunm);
-
-				/*the determinant formula----->determinant += pow(-1, x+y)getValue(x, y)*findDeterminant(minor(x, y));*/
+				ignore_column.push_back(colunm);
+				//call findDeterminant recursevly with head of the findMinor and all the elements at x and y with visited = true;
+				determinant += common_factor * findDeterminant(findMinor(matrixHead, matrixHead->row, colunm), side_length-1, ignore_column);
+				ignore_column.pop_back();
+				/*the determinant formula----->determinant += pow(-1, x+y)getValue(x, y)*findDeterminant(findMinor(x, y));*/
 			}
 		}		
 		return determinant;
@@ -164,7 +176,6 @@ struct Matrix {
 
 int main()
 {
-	cout << "Matrix: " << endl;
 	Node* head = nullptr;
 	Node* reference = nullptr;
 
@@ -184,6 +195,7 @@ int main()
 	while (lineStream >> token)
 	{
 		colNum++;
+		
 	}
 	for (int i = 0; i < colNum; i++) {
 		stringstream lineStream2(matrixRow);
@@ -212,17 +224,23 @@ int main()
 			cout << "Error! Non-square matrix!" << endl;
 			return 0;
 		}
+		
 		getline(cin, matrixRow);
 		rowNum++;
+		if (i == colNum - 1) {
+			if (rowNum != colNum) {
+				cout << "Error! Non-square matrix!" << endl;
+				return 0;
+			}
+		}
 	}
-	if (rowNum != colNum) {
-		cout << "Error! Non-square matrix!" << endl;
-		return 0;
-	}
+	
 	/////////////////////////////////////////////////
 
 	Matrix theMatrix = Matrix(head, colNum);
-	cout << "Determinant: " << theMatrix.findDeterminant(theMatrix.head_00, colNum, 0);
+	vector<int> ignore_columns;
+	
+	cout << theMatrix.findDeterminant(theMatrix.head_00, colNum, ignore_columns);
 
 	return 0;
 };
